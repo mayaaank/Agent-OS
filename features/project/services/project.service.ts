@@ -12,6 +12,7 @@ import {
   saveMessagesAction,
 } from "@/actions/db";
 import type { ChatMessage, Project, Message } from "@/types";
+import { logger } from "@/lib/logger";
 
 // ---- Project creation -------------------------------------------------------
 
@@ -24,11 +25,18 @@ export async function createProject(
   rawIdea: string
 ): Promise<CreateProjectResult | null> {
   const title = rawIdea.slice(0, 40) + (rawIdea.length > 40 ? "..." : "");
-  const project = await createProjectAction(title, rawIdea);
-  if (!project) return null;
+  try {
+    const project = await createProjectAction(title, rawIdea);
+    if (!project) return null;
 
-  localStorage.setItem("agent_os_current_project", project.id);
-  return { project, newId: project.id };
+    if (typeof window !== "undefined") {
+      localStorage.setItem("agent_os_current_project", project.id);
+    }
+    return { project, newId: project.id };
+  } catch (err) {
+    logger.error("Project service: createProject failed", { error: err });
+    return null;
+  }
 }
 
 // ---- Project loading --------------------------------------------------------
@@ -41,24 +49,34 @@ export interface LoadedProject {
 export async function loadProjectMessages(
   projectId: string
 ): Promise<LoadedProject> {
-  const dbMsgs = await getProjectMessagesAction(projectId);
-  if (dbMsgs.length === 0) return { messages: [], hasMessages: false };
+  try {
+    const dbMsgs = await getProjectMessagesAction(projectId);
+    if (dbMsgs.length === 0) return { messages: [], hasMessages: false };
 
-  const messages: ChatMessage[] = dbMsgs.map((m) => ({
-    id: m.id,
-    role: m.role,
-    sender_type: m.sender_type,
-    content: m.content,
-    timestamp: new Date(m.created_at),
-  }));
+    const messages: ChatMessage[] = dbMsgs.map((m) => ({
+      id: m.id,
+      role: m.role,
+      sender_type: m.sender_type,
+      content: m.content,
+      timestamp: new Date(m.created_at),
+    }));
 
-  return { messages, hasMessages: true };
+    return { messages, hasMessages: true };
+  } catch (err) {
+    logger.error("Project service: loadProjectMessages failed", { error: err, projectId });
+    return { messages: [], hasMessages: false };
+  }
 }
 
 // ---- Project history --------------------------------------------------------
 
 export async function fetchProjectHistory(): Promise<Project[]> {
-  return getProjectsAction();
+  try {
+    return await getProjectsAction();
+  } catch (err) {
+     logger.error("Project service: fetchProjectHistory failed", { error: err });
+     return [];
+  }
 }
 
 // ---- Persist messages -------------------------------------------------------
@@ -75,5 +93,9 @@ export async function persistMessage(
     content: msg.content,
     created_at: new Date().toISOString(),
   };
-  await saveMessagesAction(projectId, [row]);
+  try {
+    await saveMessagesAction(projectId, [row]);
+  } catch (err) {
+    logger.error("Project service: persistMessage failed", { error: err, projectId, msgId: msg.id });
+  }
 }

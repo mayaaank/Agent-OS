@@ -2,12 +2,12 @@
 // Agent OS — Main Workspace Page (thin shell)
 // ===========================================
 // This file only composes components.
-// All state lives in useWorkspace + useProject.
-// All API calls live in features/workspace/services/.
+// All state lives in useWorkspace (via useReducer) + useProject.
+// All API calls live in features/{chat,pipeline,project}/services.
 
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useCallback } from "react";
 import { useProject } from "@/features/workspace/hooks/useProject";
 import { useWorkspace } from "@/features/workspace/hooks/useWorkspace";
 import { Header } from "@/features/workspace/components/Header";
@@ -21,39 +21,35 @@ function WorkspaceInner() {
     projectId,
     setProjectId,
     pastProjects,
-    setPastProjects,
     isLoadingHistory,
-    loadProjectContext,
+    loadProjectHistoricalData,
   } = useProject();
 
   const ws = useWorkspace(projectId, setProjectId);
+  const { state } = ws;
 
-  const handleSelectProject = (id: string, idea: string) => {
-    loadProjectContext(
-      id,
-      idea,
-      ws.setPhase,
-      ws.setMessages,
-      ws.setRawIdea,
-      ws.resetPipeline
-    );
-  };
+  const handleSelectProject = useCallback(
+    (id: string, idea: string) => {
+      loadProjectHistoricalData(id, idea, ws.loadProjectContext);
+    },
+    [loadProjectHistoricalData, ws.loadProjectContext]
+  );
 
   const isActivePhase =
-    ws.phase === "chatting" ||
-    ws.phase === "processing" ||
-    ws.phase === "done" ||
-    ws.phase === "error";
+    state.phase === "chatting" ||
+    state.phase === "processing" ||
+    state.phase === "done" ||
+    state.phase === "error";
 
   return (
     <div className="h-screen flex flex-col">
-      <Header phase={ws.phase} onNewProject={ws.handleNewProject} />
+      <Header phase={state.phase} onNewProject={ws.handleNewProject} />
 
       <div className="flex-1 flex overflow-hidden">
-        {ws.phase === "idea" && (
+        {state.phase === "idea" && (
           <IdeaInput
-            rawIdea={ws.rawIdea}
-            onIdeaChange={ws.setRawIdea}
+            rawIdea={state.rawIdea}
+            onIdeaChange={(val) => ws.dispatch({ type: "SET_RAW_IDEA", payload: val })}
             onSubmit={ws.handleStartProject}
             onKeyDown={ws.handleKeyDown}
             pastProjects={pastProjects}
@@ -65,33 +61,33 @@ function WorkspaceInner() {
         {isActivePhase && (
           <>
             <Sidebar
-              phase={ws.phase}
-              projectId={projectId}
+              phase={state.phase}
+              projectId={state.projectId}
               pastProjects={pastProjects}
-              agentStatuses={ws.agentStatuses}
-              messageCount={ws.messages.length}
+              agentStatuses={state.agentStatuses}
+              messageCount={state.messages.length}
               onNewProject={ws.handleNewProject}
               onSelectProject={handleSelectProject}
               onGenerateNow={ws.handleGenerateNow}
               onRetryPipeline={ws.handleRetryPipeline}
             />
             <ChatPanel
-              messages={ws.messages}
-              isAiTyping={ws.isAiTyping}
-              phase={ws.phase}
-              inputValue={ws.inputValue}
-              onInputChange={ws.setInputValue}
+              messages={state.messages}
+              isAiTyping={state.loading.chat}
+              phase={state.phase}
+              inputValue={state.inputValue}
+              onInputChange={(val) => ws.dispatch({ type: "SET_INPUT_VALUE", payload: val })}
               onKeyDown={ws.handleKeyDown}
               onSend={ws.handleSendChat}
               onRetry={ws.handleRetryPipeline}
             />
             <BriefPanel
-              phase={ws.phase}
-              pipelineResult={ws.pipelineResult}
-              finalMarkdown={ws.finalMarkdown}
-              activeTab={ws.activeTab}
-              copied={ws.copied}
-              onTabChange={ws.setActiveTab}
+              phase={state.phase}
+              pipelineResult={state.pipelineResult}
+              finalMarkdown={state.finalMarkdown}
+              activeTab={state.activeTab}
+              copied={state.copied}
+              onTabChange={(tab) => ws.dispatch({ type: "SET_ACTIVE_TAB", payload: tab })}
               onCopy={ws.handleCopy}
               onExport={ws.handleExport}
               onRegenerate={ws.handleRegenerate}

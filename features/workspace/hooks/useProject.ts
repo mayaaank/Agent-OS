@@ -1,17 +1,15 @@
 // ===========================================
 // Agent OS — useProject Hook
 // ===========================================
-// Manages project history, loading, and the
-// active project context. Connects to project.service.ts.
+// Manages project history and loading. Connects to project.service.ts.
 
 import { useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import type { Project, ChatMessage } from "@/types";
-import type { WorkspacePhase } from "@/types/workspace";
 import {
   fetchProjectHistory,
   loadProjectMessages,
-} from "../services/project.service";
+} from "@/features/project/services/project.service";
 
 export interface UseProjectReturn {
   projectId: string | null;
@@ -19,13 +17,10 @@ export interface UseProjectReturn {
   pastProjects: Project[];
   setPastProjects: React.Dispatch<React.SetStateAction<Project[]>>;
   isLoadingHistory: boolean;
-  loadProjectContext: (
+  loadProjectHistoricalData: (
     id: string,
     initialIdea: string,
-    setPhase: (p: WorkspacePhase) => void,
-    setMessages: (m: ChatMessage[]) => void,
-    setRawIdea: (s: string) => void,
-    resetPipeline: () => void
+    onContextLoaded: (id: string, initialIdea: string, hasMessages: boolean, messages: ChatMessage[]) => void
   ) => Promise<void>;
 }
 
@@ -58,30 +53,19 @@ export function useProject(): UseProjectReturn {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [queryProjectId]);
 
-  const loadProjectContext = async (
+  const loadProjectHistoricalData = async (
     id: string,
     initialIdea: string,
-    setPhase: (p: WorkspacePhase) => void,
-    setMessages: (m: ChatMessage[]) => void,
-    setRawIdea: (s: string) => void,
-    resetPipeline: () => void
+    onContextLoaded: (id: string, initialIdea: string, hasMessages: boolean, messages: ChatMessage[]) => void
   ) => {
     setProjectId(id);
     localStorage.setItem("agent_os_current_project", id);
     router.replace(`/?id=${id}`, { scroll: false });
 
     const { messages, hasMessages } = await loadProjectMessages(id);
-
-    if (hasMessages) {
-      setMessages(messages);
-      setPhase("chatting");
-    } else {
-      setMessages([]);
-      setRawIdea(initialIdea);
-      setPhase("idea");
-    }
-
-    resetPipeline();
+    
+    // Pass everything back to useWorkspace controller to dispatch accurately
+    onContextLoaded(id, initialIdea, hasMessages, messages);
   };
 
   return {
@@ -90,6 +74,6 @@ export function useProject(): UseProjectReturn {
     pastProjects,
     setPastProjects,
     isLoadingHistory,
-    loadProjectContext,
+    loadProjectHistoricalData,
   };
 }
