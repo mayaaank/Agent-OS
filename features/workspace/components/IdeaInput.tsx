@@ -1,8 +1,8 @@
 // ===========================================
-// Agent OS — IdeaInput Component  (Phase 1)
+// Agent OS — IdeaInput Component (SunHacks Aesthetic)
 // ===========================================
 import { useRef } from "react";
-import { Sparkles, Send, Loader2, Folder } from "lucide-react";
+import { Sparkles, ArrowRight, Loader2, Folder, Zap, MessageSquareCode } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import type { Project } from "@/types";
@@ -29,34 +29,39 @@ export function IdeaInput({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   return (
-    <div className="flex-1 flex flex-col lg:flex-row">
+    <div className="flex-1 flex flex-col lg:flex-row relative overflow-hidden bg-[#0a0a0a] font-sans">
       {/* Recent projects sidebar */}
-      <aside className="hidden lg:flex w-64 border-r border-border/50 flex-col bg-sidebar/30">
-        <div className="p-4 border-b border-border/50">
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Recent Projects
-          </h3>
+      <aside className="hidden lg:flex w-72 border-r border-[#1f1f1f] flex-col bg-[#111] relative z-10">
+        <div className="p-6 border-b border-[#1f1f1f] flex items-center gap-3">
+           < Zap className="size-4 text-slate-500" />
+           <h3 className="text-xs font-semibold uppercase tracking-widest text-slate-400">
+             Project Archive
+           </h3>
         </div>
-        <div className="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto p-4 space-y-2 custom-scrollbar">
           {isLoadingHistory ? (
-            <div className="p-4 flex justify-center">
-              <Loader2 className="size-4 animate-spin text-muted-foreground" />
+            <div className="p-8 flex justify-center">
+              <Loader2 className="size-6 animate-spin text-slate-700" />
             </div>
           ) : pastProjects.length === 0 ? (
-            <div className="p-4 text-center text-xs text-muted-foreground">
-              No projects yet.
+            <div className="px-6 py-10 text-center bg-[#0a0a0a] rounded-2xl border border-[#222]">
+              <p className="text-[11px] text-slate-600 font-medium uppercase tracking-widest leading-loose">
+                Your past projects will appear here.
+              </p>
             </div>
           ) : (
             pastProjects.map((p) => (
               <button
                 key={p.id}
                 onClick={() => onSelectProject(p.id, p.idea_raw)}
-                className="w-full text-left px-3 py-2 text-sm rounded-md transition-colors hover:bg-muted text-foreground/80 hover:text-foreground"
+                className="w-full text-left px-5 py-4 text-[13px] rounded-xl transition-all border border-transparent hover:bg-[#1f1f1f] text-slate-400 hover:text-white group"
               >
-                <span className="flex items-center gap-2">
-                  <Folder className="size-3.5 text-muted-foreground shrink-0" />
-                  <span className="truncate">{p.title}</span>
-                </span>
+                <div className="flex items-center gap-3">
+                  <div className="size-8 rounded-lg bg-[#0a0a0a] border border-[#222] flex items-center justify-center shrink-0 transition-all text-slate-500 group-hover:border-[#00f0ff]/30 group-hover:text-[#00f0ff]">
+                    <Folder className="size-4" />
+                  </div>
+                  <span className="truncate font-medium">{p.title}</span>
+                </div>
               </button>
             ))
           )}
@@ -64,40 +69,51 @@ export function IdeaInput({
       </aside>
 
       {/* Idea input */}
-      <div className="flex-1 flex items-center justify-center p-8 bg-background/50">
-        <div className="max-w-2xl w-full space-y-6">
-          <div className="text-center space-y-3">
-            <div className="inline-flex items-center justify-center size-14 rounded-2xl bg-primary/10 mb-2">
-              <Sparkles className="size-7 text-primary" />
+      <div className="flex-1 flex flex-col items-center justify-center p-8 md:p-16 relative overflow-hidden">
+        <div className="w-full max-w-4xl space-y-12 relative z-10">
+          <div className="flex flex-col items-center text-center space-y-10">
+            <div className="flex flex-col items-center gap-4">
+              <div className="size-16 rounded-3xl bg-[#111] border border-[#222] flex items-center justify-center shadow-inner group hover:scale-105 transition-transform">
+                <Sparkles className="size-8 text-[#00f0ff] opacity-80" />
+              </div>
+              <span className="text-[11px] text-slate-600 font-bold uppercase tracking-[0.4em]">Ready Phase 01</span>
             </div>
-            <h1 className="text-2xl font-bold">What do you want to build?</h1>
-            <p className="text-muted-foreground max-w-md mx-auto">
-              Describe your idea in plain language. Our AI agents will help you
-              refine it into a structured, build-ready prompt.
-            </p>
+            
+            <div className="space-y-6">
+              <h1 className="text-4xl md:text-6xl font-bold tracking-tight text-white leading-[1.1]">
+                What are we <span className="text-[#00f0ff]">building</span> today?
+              </h1>
+              <p className="text-slate-500 text-base md:text-lg max-w-2xl mx-auto leading-relaxed font-medium">
+                Describe your concept in plain language. Our multi-agent cluster will interpret your logic and refine it into a build-ready technical prompt.
+              </p>
+            </div>
           </div>
-          <div className="relative">
-            <Textarea
-              ref={textareaRef}
-              value={rawIdea}
-              onChange={(e) => onIdeaChange(e.target.value)}
-              onKeyDown={onKeyDown}
-              placeholder="e.g., I want to build a habit tracking app where users can set daily goals..."
-              className="min-h-[140px] resize-none text-base p-4 pr-14 rounded-xl border-border/80 focus:border-primary/50 bg-card"
-              autoFocus
-            />
-            <Button
-              onClick={onSubmit}
-              disabled={!rawIdea.trim()}
-              size="icon"
-              className="absolute right-3 bottom-3 size-9 rounded-lg"
-            >
-              <Send className="size-4" />
-            </Button>
+
+          <div className="relative group max-w-2xl mx-auto w-full">
+            <div className="relative bg-[#0a0a0a] rounded-[32px] border border-[#1f1f1f] p-3 shadow-2xl focus-within:border-[#00f0ff]/40 transition-all">
+              <Textarea
+                ref={textareaRef}
+                value={rawIdea}
+                onChange={(e) => onIdeaChange(e.target.value)}
+                onKeyDown={onKeyDown}
+                placeholder="E.g., A multi-tenant SaaS platform for team management..."
+                className="min-h-[180px] w-full bg-transparent border-none text-white text-lg placeholder:text-slate-700 resize-none rounded-[28px] focus-visible:ring-0 px-8 py-6 transition-all font-medium leading-[1.6]"
+              />
+              <div className="px-8 pb-6 pt-4 flex items-center justify-between">
+                <div className="flex items-center gap-3 text-[11px] text-slate-600 font-bold uppercase tracking-widest">
+                   <div className="w-1.5 h-1.5 rounded-full bg-slate-800" />
+                   <span>Project Draft</span>
+                </div>
+                <Button 
+                   onClick={onSubmit} 
+                   disabled={!rawIdea.trim()}
+                   className="bg-[#1f1f1f] hover:bg-[#00f0ff] hover:text-black text-white px-10 h-14 rounded-full font-bold uppercase tracking-[0.2em] transition-all disabled:opacity-20 active:scale-95 shadow-lg group"
+                >
+                  TRANSMIT <ArrowRight className="ml-3 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                </Button>
+              </div>
+            </div>
           </div>
-          <p className="text-xs text-center text-muted-foreground">
-            Press Enter to start • Shift+Enter for new line
-          </p>
         </div>
       </div>
     </div>

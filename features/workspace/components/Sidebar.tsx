@@ -1,7 +1,7 @@
 // ===========================================
-// Agent OS — Sidebar Component
+// Agent OS — Sidebar Component (Tech Style)
 // ===========================================
-import { Loader2, CheckCircle2, Sparkles, Plus, RotateCcw } from "lucide-react";
+import { Loader2, CheckCircle2, Sparkles, Plus, RotateCcw, LayoutDashboard, UserCircle, Cpu, Network, Layers } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import type { Project } from "@/types";
@@ -31,98 +31,134 @@ export function Sidebar({
   onRetryPipeline,
 }: SidebarProps) {
   return (
-    <aside className="w-56 border-r border-border/50 p-3 hidden lg:flex flex-col gap-3 bg-sidebar/50">
-      <Button
-        variant="outline"
-        size="sm"
-        className="justify-start text-xs"
-        onClick={onNewProject}
-      >
-        <Plus className="size-3 mr-1.5" />
-        New Project
-      </Button>
+    <aside className="w-64 border-r border-[#1f1f1f] p-6 hidden lg:flex flex-col gap-8 bg-[#111] font-sans">
+      <div className="space-y-4">
+        <div className="flex items-center gap-2 px-1 text-slate-500">
+           <LayoutDashboard className="size-4" />
+           <h3 className="text-[11px] font-bold uppercase tracking-widest text-slate-500">Explorer</h3>
+        </div>
+        
+        <Button
+          variant="outline"
+          size="sm"
+          className="w-full justify-start text-xs rounded-xl h-10 border-[#333] bg-[#0a0a0a] text-white hover:bg-[#1f1f1f] hover:border-[#444] transition-all"
+          onClick={onNewProject}
+        >
+          <Plus className="size-4 mr-2" />
+          New Project
+        </Button>
+      </div>
 
-      <div className="pt-2">
-        <h3 className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground px-2 mb-2">
-          My Projects
-        </h3>
-        <div className="max-h-40 overflow-y-auto custom-scrollbar space-y-1">
-          {pastProjects.map((p) => (
-            <button
-              key={p.id}
-              onClick={() => onSelectProject(p.id, p.idea_raw)}
-              className={`w-full text-left px-2 py-1.5 text-xs rounded-md transition-colors truncate ${
-                projectId === p.id
-                  ? "bg-primary/10 text-primary font-medium"
-                  : "hover:bg-muted text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {p.title}
-            </button>
-          ))}
+      <div className="flex-1 flex flex-col gap-10 overflow-hidden">
+        <div>
+          <h4 className="text-[11px] font-bold uppercase tracking-widest text-slate-500 px-1 mb-4">
+            Projects
+          </h4>
+          <div className="max-h-60 overflow-y-auto custom-scrollbar space-y-1.5 pr-1">
+            {pastProjects.length === 0 ? (
+               <div className="px-4 py-6 text-[11px] text-slate-600 rounded-xl border border-[#222] bg-[#0a0a0a] text-center">
+                  No projects yet
+               </div>
+            ) : pastProjects.map((p) => (
+              <button
+                key={p.id}
+                onClick={() => onSelectProject(p.id, p.idea_raw)}
+                className={`group w-full text-left px-4 py-2.5 text-[13px] rounded-xl transition-all border flex items-center gap-3 ${
+                  projectId === p.id
+                    ? "bg-[#1f1f1f] text-white border-[#333] shadow-sm font-medium"
+                    : "hover:bg-[#18181b] text-slate-500 hover:text-slate-300 border-transparent"
+                }`}
+              >
+                <div className={`size-1.5 rounded-full shrink-0 transition-all ${projectId === p.id ? 'bg-[#00f0ff] shadow-[0_0_8px_rgba(0,240,255,0.4)]' : 'bg-[#333]'}`} />
+                <span className="truncate">{p.title}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <h4 className="text-[11px] font-bold uppercase tracking-widest text-slate-500 px-1 mb-4">
+            Active Session
+          </h4>
+          <div className="space-y-3">
+            {agentStatuses.map((agent, i) => (
+              <div
+                key={agent.name}
+                className={`flex items-center gap-4 px-4 py-3 rounded-xl transition-all border ${
+                   agent.status === "running" ? "bg-[#0a0a0a] border-[#00f0ff]/20" : "border-transparent text-slate-500"
+                }`}
+              >
+                  <div className={`size-10 rounded-xl bg-[#0a0a0a] border flex items-center justify-center transition-all ${
+                     agent.status === 'done' ? 'border-[#00f0ff]/30 shadow-sm' : 
+                     agent.status === 'running' ? 'border-[#00f0ff]/50 shadow-md' : 
+                     'border-[#222]'
+                  }`}>
+                    {i === 0 && <Cpu className={`size-5 ${agent.status === 'pending' ? 'text-slate-700' : 'text-[#00f0ff] opacity-80'}`} />}
+                    {i === 1 && <Network className={`size-5 ${agent.status === 'pending' ? 'text-slate-700' : 'text-[#00f0ff] opacity-80'}`} />}
+                    {i === 2 && <Layers className={`size-5 ${agent.status === 'pending' ? 'text-slate-700' : 'text-[#00f0ff] opacity-80'}`} />}
+                    {i === 3 && <Sparkles className={`size-5 ${agent.status === 'pending' ? 'text-slate-700' : 'text-[#00f0ff] opacity-80'}`} />}
+                  </div>
+                
+                <div className="flex flex-col min-w-0">
+                  <span className={`text-[13px] transition-colors ${
+                     agent.status === "done" ? "text-slate-300" : agent.status === "running" ? "text-white font-semibold" : "text-slate-600"
+                  }`}>
+                    {agent.name}.ts
+                  </span>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                     <span className={`text-[10px] font-bold uppercase tracking-widest ${
+                        agent.status === 'running' ? 'text-[#00f0ff]' : 
+                        agent.status === 'done' ? 'text-green-500/60' : 'text-slate-700'
+                     }`}>
+                        {agent.status === 'running' ? 'ANALYZING...' : agent.status}
+                     </span>
+                  </div>
+                </div>
+                
+                {agent.status === "done" && (
+                   <CheckCircle2 className="size-4 text-green-500/40 ml-auto" />
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
-      <Separator />
-
-      <div className="space-y-1">
-        <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground px-2 mb-2">
-          Agent Status
-        </p>
-        {agentStatuses.map((agent) => (
-          <div
-            key={agent.name}
-            className="flex items-center gap-2 px-2 py-1.5 rounded-md text-xs"
-          >
-            {agent.status === "pending" && (
-              <div className="size-2 rounded-full bg-muted-foreground/30" />
-            )}
-            {agent.status === "running" && (
-              <Loader2 className="size-3 text-primary animate-spin" />
-            )}
-            {agent.status === "done" && (
-              <CheckCircle2 className="size-3 text-green-500" />
-            )}
-            <span
-              className={
-                agent.status === "done" ? "text-foreground" : "text-muted-foreground"
-              }
-            >
-              {agent.name}
-            </span>
-          </div>
-        ))}
-      </div>
-
-      {phase === "chatting" && messageCount >= 4 && (
-        <>
-          <Separator />
+      <div className="mt-auto pt-6 border-t border-[#1f1f1f] space-y-4">
+        {phase === "chatting" && messageCount >= 4 && (
           <Button
             size="sm"
-            variant="secondary"
-            className="text-xs"
             onClick={onGenerateNow}
+            className="w-full font-bold rounded-xl h-12 uppercase tracking-widest bg-white text-black hover:bg-slate-200 transition-all shadow-lg"
           >
-            <Sparkles className="size-3 mr-1.5" />
-            Generate Now
+            <Sparkles className="size-4 mr-2" />
+            Generate
           </Button>
-        </>
-      )}
+        )}
 
-      {phase === "error" && (
-        <>
-          <Separator />
+        {phase === "error" && (
           <Button
             size="sm"
             variant="destructive"
-            className="text-xs"
             onClick={onRetryPipeline}
+            className="w-full rounded-xl font-bold h-12 bg-red-500/10 border border-red-500/20 text-red-500 hover:bg-red-500/20"
           >
-            <RotateCcw className="size-3 mr-1.5" />
-            Retry Pipeline
+            <RotateCcw className="size-4 mr-2" />
+            Retry
           </Button>
-        </>
-      )}
+        )}
+
+        <div className="p-4 bg-[#0a0a0a] rounded-xl border border-[#1f1f1f] flex items-center gap-3">
+           <div className="size-8 rounded-lg bg-[#111] flex items-center justify-center border border-[#222]">
+              <UserCircle className="size-5 text-slate-500" />
+           </div>
+           <div className="flex flex-col">
+              <span className="text-[11px] font-bold text-white uppercase tracking-widest">Builder Session</span>
+              <span className="text-[10px] text-slate-600 uppercase tracking-wide">Developer Tier</span>
+           </div>
+        </div>
+      </div>
     </aside>
   );
 }
+
