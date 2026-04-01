@@ -281,7 +281,7 @@ export function useWorkspace(
     if (typeof window !== "undefined") {
       localStorage.removeItem("agent_os_current_project");
     }
-    router.replace("/", { scroll: false });
+    router.replace("/workspace", { scroll: false }); // Reset within workspace context
     setProjectId(null);
     dispatch({ type: "RESET_PROJECT" });
   }, [router, setProjectId]);

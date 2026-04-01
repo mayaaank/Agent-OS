@@ -78,7 +78,7 @@ export function useProject(): UseProjectReturn {
   ) => {
     setProjectId(id);
     localStorage.setItem("agent_os_current_project", id);
-    router.replace(`/?id=${id}`, { scroll: false });
+    router.replace(`/workspace?id=${id}`, { scroll: false });
 
     const data = await loadProjectData(id);
 
