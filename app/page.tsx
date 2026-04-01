@@ -1,6 +1,7 @@
-// ===========================================
+'TYPESCRIPT'
+// =============================================================================
 // Agent OS — Main Workspace Page (thin shell)
-// ===========================================
+// =============================================================================
 // This file only composes components.
 // All state lives in useWorkspace (via useReducer) + useProject.
 // All API calls live in features/{chat,pipeline,project}/services.
@@ -15,6 +16,7 @@ import { Sidebar } from "@/features/workspace/components/Sidebar";
 import { IdeaInput } from "@/features/workspace/components/IdeaInput";
 import { ChatPanel } from "@/features/workspace/components/ChatPanel";
 import { BriefPanel } from "@/features/workspace/components/BriefPanel";
+import type { LoadedProjectContext } from "@/features/workspace/hooks/useProject";
 
 function WorkspaceInner() {
   const {
@@ -28,9 +30,15 @@ function WorkspaceInner() {
   const ws = useWorkspace(projectId, setProjectId);
   const { state } = ws;
 
+  // FIX: handleSelectProject now receives the full LoadedProjectContext
+  // and passes it straight to loadProjectContext — no partial data.
   const handleSelectProject = useCallback(
     (id: string, idea: string) => {
-      loadProjectHistoricalData(id, idea, ws.loadProjectContext);
+      loadProjectHistoricalData(
+        id,
+        idea,
+        (ctx: LoadedProjectContext) => ws.loadProjectContext(ctx)
+      );
     },
     [loadProjectHistoricalData, ws.loadProjectContext]
   );
@@ -49,7 +57,9 @@ function WorkspaceInner() {
         {state.phase === "idea" && (
           <IdeaInput
             rawIdea={state.rawIdea}
-            onIdeaChange={(val) => ws.dispatch({ type: "SET_RAW_IDEA", payload: val })}
+            onIdeaChange={(val) =>
+              ws.dispatch({ type: "SET_RAW_IDEA", payload: val })
+            }
             onSubmit={ws.handleStartProject}
             onKeyDown={ws.handleKeyDown}
             pastProjects={pastProjects}
@@ -61,22 +71,25 @@ function WorkspaceInner() {
         {isActivePhase && (
           <>
             <Sidebar
+              state={state}
+              dispatch={ws.dispatch}
               phase={state.phase}
-              projectId={state.projectId}
               pastProjects={pastProjects}
-              agentStatuses={state.agentStatuses}
-              messageCount={state.messages.length}
               onNewProject={ws.handleNewProject}
               onSelectProject={handleSelectProject}
               onGenerateNow={ws.handleGenerateNow}
+              onRegenerate={ws.handleRegenerate}
               onRetryPipeline={ws.handleRetryPipeline}
+              onFeedbackSubmit={ws.handleFeedbackSubmit}
             />
             <ChatPanel
               messages={state.messages}
               isAiTyping={state.loading.chat}
               phase={state.phase}
               inputValue={state.inputValue}
-              onInputChange={(val) => ws.dispatch({ type: "SET_INPUT_VALUE", payload: val })}
+              onInputChange={(val) =>
+                ws.dispatch({ type: "SET_INPUT_VALUE", payload: val })
+              }
               onKeyDown={ws.handleKeyDown}
               onSend={ws.handleSendChat}
               onRetry={ws.handleRetryPipeline}
@@ -87,7 +100,9 @@ function WorkspaceInner() {
               finalMarkdown={state.finalMarkdown}
               activeTab={state.activeTab}
               copied={state.copied}
-              onTabChange={(tab) => ws.dispatch({ type: "SET_ACTIVE_TAB", payload: tab })}
+              onTabChange={(tab) =>
+                ws.dispatch({ type: "SET_ACTIVE_TAB", payload: tab })
+              }
               onCopy={ws.handleCopy}
               onExport={ws.handleExport}
               onRegenerate={ws.handleRegenerate}

@@ -1,37 +1,45 @@
-// ===========================================
+'EOF'
+// =============================================================================
 // Agent OS — useWorkspace Hook (Controller)
-// ===========================================
-// This hook operates purely as a controller.
-// It manages UI state via a pure useReducer and delegates ALL
-// API/business orchestration to domain services.
+// =============================================================================
+// PHASE 3: handleFeedbackSubmit added for partial pipeline re-run via feedback.
 
 "use client";
 
-import { useReducer, useCallback } from "react";
+import { useReducer, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
-import type { ChatMessage, Project } from "@/types";
+import type { ChatMessage } from "@/types";
 import { workspaceReducer, initialWorkspaceState } from "./workspaceReducer";
-import { sendChatMessage, validateChatInput } from "@/features/chat/services/chat.service";
+import type { LoadedProjectContext } from "./useProject";
+import {
+  sendChatMessage,
+  validateChatInput,
+} from "@/features/chat/services/chat.service";
 import {
   runPipelineRequest,
   shouldTriggerPipeline,
 } from "@/features/pipeline/services/pipeline.service";
-import { createProject, persistMessage } from "@/features/project/services/project.service";
+import {
+  createProject,
+  persistMessage,
+  updateProjectStatus,
+} from "@/features/project/services/project.service";
 
 export function useWorkspace(
   projectId: string | null,
-  setProjectId: (id: string | null) => void // Kept for inter-hook compatibility, though ideally all in context
+  setProjectId: (id: string | null) => void
 ) {
   const router = useRouter();
   const { toast } = useToast();
+  const isSubmitting = useRef(false);
 
   const [state, dispatch] = useReducer(workspaceReducer, {
     ...initialWorkspaceState,
     projectId,
   });
 
-  // ── Helpers ──────────────────────────────────────────────
+  // ── Helpers ────────────────────────────────────────────────────────────────
 
   const updateAgentStatus = useCallback(
     (index: number, status: "pending" | "running" | "done") => {
@@ -40,48 +48,77 @@ export function useWorkspace(
     []
   );
 
-  const resetPipeline = useCallback(() => {
-    dispatch({ type: "RESET_PIPELINE" });
-  }, []);
-
   const dispatchError = useCallback(
-    (message: string, isPipeline: boolean = false) => {
-      if (isPipeline) {
-        dispatch({ type: "SET_PHASE", payload: "error" });
-      }
+    (message: string, isPipeline = false) => {
+      if (isPipeline) dispatch({ type: "SET_PHASE", payload: "error" });
       dispatch({ type: "SET_ERROR", payload: message });
-      toast({ variant: "destructive", title: isPipeline ? "Pipeline failed" : "Error", description: message });
+      toast({
+        variant: "destructive",
+        title: isPipeline ? "Pipeline failed" : "Error",
+        description: message,
+      });
     },
     [toast]
   );
 
-  // ── Pipeline Orchestration ───────────────────────────────
+  // ── Pipeline orchestration ─────────────────────────────────────────────────
 
   const runPipeline = useCallback(
-    async (chatMessages: ChatMessage[], activeProjectId?: string | null) => {
+    async (
+      chatMessages: ChatMessage[],
+      activeProjectId?: string | null,
+      options: { feedback?: string; restartFrom?: import("@/types").AgentName } = {}
+    ) => {
       dispatch({ type: "SET_PHASE", payload: "processing" });
       dispatch({ type: "SET_LOADING", payload: { pipeline: true } });
 
+      const pid = activeProjectId ?? state.projectId;
+
+      if (pid) {
+        await updateProjectStatus(pid, "processing");
+      }
+
       try {
-        const pid = activeProjectId ?? state.projectId;
-        const { result, markdown } = await runPipelineRequest(chatMessages, updateAgentStatus, pid);
+        const { result, markdown } = await runPipelineRequest(
+          chatMessages,
+          updateAgentStatus,
+          pid,
+          {
+            rawIdea: state.rawIdea,
+            feedback: options.feedback,
+            restartFrom: options.restartFrom,
+          }
+        );
 
-        dispatch({
-          type: "SET_PIPELINE_RESULT",
-          payload: { result, markdown },
-        });
+        dispatch({ type: "SET_PIPELINE_RESULT", payload: { result, markdown } });
 
+        if (pid) {
+          await updateProjectStatus(pid, "completed");
+        }
+
+        if (options.feedback) {
+          toast({
+            title: "Brief updated",
+            description: options.restartFrom
+              ? `Re-ran from ${options.restartFrom.replace(/_/g, " ")}`
+              : "Pipeline re-run from feedback",
+          });
+        }
       } catch (err) {
-        const message = err instanceof Error ? err.message : "An unexpected error occurred.";
+        const message =
+          err instanceof Error ? err.message : "An unexpected error occurred.";
         dispatchError(message, true);
+        if (pid) {
+          await updateProjectStatus(pid, "error");
+        }
       } finally {
         dispatch({ type: "SET_LOADING", payload: { pipeline: false } });
       }
     },
-    [state.projectId, dispatchError, updateAgentStatus]
+    [state.projectId, state.rawIdea, dispatchError, updateAgentStatus, toast]
   );
 
-  // ── Chat Orchestration ───────────────────────────────────
+  // ── Chat orchestration ─────────────────────────────────────────────────────
 
   const sendMessage = useCallback(
     async (
@@ -100,7 +137,6 @@ export function useWorkspace(
       };
 
       const allMsgs = [...(existingMessages ?? state.messages), userMsg];
-
       dispatch({ type: "SET_MESSAGES", payload: allMsgs });
       dispatch({ type: "SET_INPUT_VALUE", payload: "" });
       dispatch({ type: "SET_LOADING", payload: { chat: true } });
@@ -131,57 +167,60 @@ export function useWorkspace(
           setTimeout(() => runPipeline(updatedMsgs, activeProjectId), 1500);
         }
       } catch (err) {
-        const message = err instanceof Error ? err.message : "Failed to reach the AI.";
+        const message =
+          err instanceof Error ? err.message : "Failed to reach the AI.";
         dispatchError(message);
-
         dispatch({
           type: "ADD_MESSAGE",
           payload: {
             id: crypto.randomUUID(),
             role: "assistant",
             sender_type: "orchestrator",
-            content: "Something went wrong. Please try sending your message again.",
+            content: "Something went wrong. Please try again.",
             timestamp: new Date(),
           },
         });
       } finally {
         dispatch({ type: "SET_LOADING", payload: { chat: false } });
+        isSubmitting.current = false;
       }
     },
     [state.messages, state.projectId, runPipeline, dispatchError]
   );
 
-  // ── Action Handlers ──────────────────────────────────────
+  // ── Action handlers ────────────────────────────────────────────────────────
 
   const handleStartProject = useCallback(async () => {
+    if (isSubmitting.current) return;
     const { valid, error } = validateChatInput(state.rawIdea);
     if (!valid) {
       toast({ variant: "destructive", title: "Invalid Input", description: error });
       return;
     }
-
+    isSubmitting.current = true;
     const result = await createProject(state.rawIdea);
     if (!result) {
-       dispatchError("Could not create project.");
-       return;
+      isSubmitting.current = false;
+      dispatchError("Could not create project.");
+      return;
     }
-
     const { project, newId } = result;
     setProjectId(newId);
     dispatch({
-       type: "INIT_PROJECT",
-       payload: { projectId: newId, rawIdea: state.rawIdea, hasMessages: true, messages: [] }
+      type: "INIT_PROJECT",
+      payload: { projectId: newId, rawIdea: state.rawIdea, hasMessages: true, messages: [] },
     });
-
     router.replace(`/?id=${newId}`, { scroll: false });
+    await updateProjectStatus(newId, "gathering");
     sendMessage(state.rawIdea, [], newId);
-
     return project;
   }, [state.rawIdea, sendMessage, setProjectId, router, dispatchError, toast]);
 
   const handleSendChat = useCallback(() => {
+    if (isSubmitting.current) return;
     const { valid } = validateChatInput(state.inputValue);
     if (!valid || state.loading.chat) return;
+    isSubmitting.current = true;
     sendMessage(state.inputValue);
   }, [state.inputValue, state.loading.chat, sendMessage]);
 
@@ -202,14 +241,22 @@ export function useWorkspace(
   }, [state.messages, runPipeline]);
 
   const handleRegenerate = useCallback(() => {
-    resetPipeline();
+    dispatch({ type: "RESET_PIPELINE" });
     runPipeline(state.messages);
-  }, [state.messages, resetPipeline, runPipeline]);
+  }, [state.messages, runPipeline]);
 
   const handleRetryPipeline = useCallback(() => {
     dispatch({ type: "SET_PHASE", payload: "processing" });
     runPipeline(state.messages);
   }, [state.messages, runPipeline]);
+
+  // PHASE 3: Submit user feedback for partial pipeline re-run
+  const handleFeedbackSubmit = useCallback(() => {
+    const feedback = state.feedbackValue.trim();
+    if (!feedback || state.loading.pipeline) return;
+    dispatch({ type: "SET_FEEDBACK_VALUE", payload: "" });
+    runPipeline(state.messages, state.projectId, { feedback });
+  }, [state.feedbackValue, state.messages, state.projectId, state.loading.pipeline, runPipeline]);
 
   const handleCopy = useCallback(async () => {
     await navigator.clipboard.writeText(state.finalMarkdown);
@@ -223,37 +270,41 @@ export function useWorkspace(
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${
-      state.pipelineResult?.finalPrompt.product_name
-        ?.replace(/\s+/g, "-")
-        .toLowerCase() ?? "project"
-    }-prompt.md`;
+    a.download = `${state.pipelineResult?.finalPrompt.product_name
+        ?.replace(/\s+/g, "-").toLowerCase() ?? "project"
+      }-prompt.md`;
     a.click();
     URL.revokeObjectURL(url);
   }, [state.finalMarkdown, state.pipelineResult]);
 
   const handleNewProject = useCallback(() => {
     if (typeof window !== "undefined") {
-       localStorage.removeItem("agent_os_current_project");
+      localStorage.removeItem("agent_os_current_project");
     }
     router.replace("/", { scroll: false });
     setProjectId(null);
     dispatch({ type: "RESET_PROJECT" });
   }, [router, setProjectId]);
 
-  const loadProjectContext = useCallback((
-      id: string,
-      initialIdea: string,
-      hasMessages: boolean,
-      messages: ChatMessage[]
-  ) => {
-      setProjectId(id);
+  const loadProjectContext = useCallback(
+    (ctx: LoadedProjectContext) => {
+      setProjectId(ctx.id);
       dispatch({
-        type: "INIT_PROJECT",
-        payload: { projectId: id, rawIdea: initialIdea, hasMessages, messages }
-       });
-  }, [setProjectId]);
-  
+        type: "LOAD_PROJECT",
+        payload: {
+          projectId: ctx.id,
+          rawIdea: ctx.initialIdea,
+          hasMessages: ctx.hasMessages,
+          messages: ctx.messages,
+          pipelineResult: ctx.pipelineResult,
+          finalMarkdown: ctx.finalMarkdown,
+          isCompleted: ctx.isCompleted,
+        },
+      });
+    },
+    [setProjectId]
+  );
+
   return {
     state,
     dispatch,
@@ -263,10 +314,10 @@ export function useWorkspace(
     handleGenerateNow,
     handleRegenerate,
     handleRetryPipeline,
+    handleFeedbackSubmit,  // PHASE 3
     handleCopy,
     handleExport,
     handleNewProject,
     loadProjectContext,
-    resetPipeline,
   };
 }
