@@ -1,11 +1,13 @@
-// ===========================================
+'EOF'
+// =============================================================================
 // Agent OS — Pipeline Service
-// ===========================================
-// Handles communication with /api/pipeline and saves the result to DB.
+// =============================================================================
+// PHASE 3: runPipelineRequest accepts optional feedback + restartFrom
+// so useWorkspace can trigger a partial re-run without a full page reset.
 
-import type { ChatMessage } from "@/types";
+import type { ChatMessage, AgentName } from "@/types";
 import type { PipelineResult } from "@/agents/orchestrator";
-import { saveAgentOutputAction, saveFinalPromptAction } from "@/actions/db";
+import { saveFinalPromptAction } from "@/actions/db";
 import { formatFinalPrompt } from "@/utils/format-prompt";
 import { logger } from "@/lib/logger";
 
@@ -14,61 +16,90 @@ export type AgentStatusUpdater = (
   status: "pending" | "running" | "done"
 ) => void;
 
-// Detect whether the orchestrator is signalling pipeline readiness
 export function shouldTriggerPipeline(content: string): boolean {
   const lower = content.toLowerCase();
   return (
-    lower.includes("enough information") || lower.includes("generate your")
+    lower.includes("enough information") ||
+    lower.includes("generate your")
   );
+}
+
+export interface RunPipelineOptions {
+  feedback?: string;        // PHASE 3: user feedback text
+  restartFrom?: AgentName;  // PHASE 3: explicit restart point override
+  rawIdea?: string;
 }
 
 export async function runPipelineRequest(
   messages: ChatMessage[],
   onStatusUpdate: AgentStatusUpdater,
-  projectId: string | null
+  projectId: string | null,
+  options: RunPipelineOptions = {}
 ): Promise<{ result: PipelineResult; markdown: string }> {
   try {
-    // Animate agent statuses one-by-one while real API call runs
-    for (let i = 0; i < 4; i++) {
+    // Agent count depends on restart point for partial re-runs
+    const agentOrder: AgentName[] = [
+      "requirement_analyst",
+      "product_strategist",
+      "technical_architect",
+      "prompt_engineer",
+    ];
+
+    const startIndex = options.restartFrom
+      ? agentOrder.indexOf(options.restartFrom)
+      : 0;
+    const effectiveStart = startIndex === -1 ? 0 : startIndex;
+
+    // Animate only the agents that will actually run
+    const animateStatuses = async () => {
+      for (let i = effectiveStart; i < 4; i++) {
         onStatusUpdate(i, "running");
         await new Promise((r) => setTimeout(r, 800));
-    }
+      }
+    };
 
-    const res = await fetch("/api/pipeline", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ messages }),
-    });
+    const [, res] = await Promise.all([
+      animateStatuses(),
+      fetch("/api/pipeline", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages,
+          projectId,
+          rawIdea: options.rawIdea,
+          // PHASE 3: pass feedback params if present
+          ...(options.feedback ? { feedback: options.feedback } : {}),
+          ...(options.restartFrom ? { restartFrom: options.restartFrom } : {}),
+        }),
+      }),
+    ]);
 
     if (!res.ok) {
       const traceId = res.headers.get("x-trace-id");
       const errBody = await res.json().catch(() => ({}));
       throw new Error(
         (errBody as { error?: string })?.error ??
-          `Pipeline failed (${res.status})${traceId ? ` — TraceID: ${traceId}` : ""}`
+        `Pipeline failed (${res.status})${traceId ? ` — TraceID: ${traceId}` : ""}`
       );
     }
 
     const result = (await res.json()) as PipelineResult;
     const markdown = formatFinalPrompt(result.finalPrompt);
 
-    // Orchestrate persistence step exclusively in the service layer
     if (projectId) {
-      // Intentionally not awaiting all of these fully to avoid blocking the UI,
-      // but wrapping them to handle any errors silently without failing the core return.
-      Promise.all([
-        saveAgentOutputAction(projectId, "requirement_analyst", result.requirements),
-        saveAgentOutputAction(projectId, "product_strategist", result.strategy),
-        saveAgentOutputAction(projectId, "technical_architect", result.architecture),
-        saveFinalPromptAction(projectId, markdown),
-      ]).catch((err) => {
-          logger.error("Failed to persist pipeline output to DB", { error: err.message, projectId });
+      saveFinalPromptAction(projectId, markdown).catch((err) => {
+        logger.error("Failed to persist final prompt", {
+          error: err instanceof Error ? err.message : String(err),
+          projectId,
+        });
       });
     }
 
     return { result, markdown };
   } catch (error) {
-    logger.error("Pipeline service failed", { error: error instanceof Error ? error.message : String(error) });
+    logger.error("Pipeline service failed", {
+      error: error instanceof Error ? error.message : String(error),
+    });
     throw error;
   }
 }

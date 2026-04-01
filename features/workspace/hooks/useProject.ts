@@ -1,15 +1,27 @@
-// ===========================================
+'TYPESCRIPT'
+// =============================================================================
 // Agent OS — useProject Hook
-// ===========================================
+// =============================================================================
 // Manages project history and loading. Connects to project.service.ts.
 
 import { useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import type { Project, ChatMessage } from "@/types";
+import type { PipelineResult } from "@/agents/orchestrator";
 import {
   fetchProjectHistory,
-  loadProjectMessages,
+  loadProjectData,
 } from "@/features/project/services/project.service";
+
+export interface LoadedProjectContext {
+  id: string;
+  initialIdea: string;
+  hasMessages: boolean;
+  messages: ChatMessage[];
+  pipelineResult: PipelineResult | null;
+  finalMarkdown: string;
+  isCompleted: boolean;
+}
 
 export interface UseProjectReturn {
   projectId: string | null;
@@ -20,7 +32,7 @@ export interface UseProjectReturn {
   loadProjectHistoricalData: (
     id: string,
     initialIdea: string,
-    onContextLoaded: (id: string, initialIdea: string, hasMessages: boolean, messages: ChatMessage[]) => void
+    onContextLoaded: (ctx: LoadedProjectContext) => void
   ) => Promise<void>;
 }
 
@@ -50,22 +62,35 @@ export function useProject(): UseProjectReturn {
       setIsLoadingHistory(false);
     }
     init();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [queryProjectId]);
 
+  /**
+   * FIX: Now fetches messages AND agent outputs AND final prompt.
+   * The full LoadedProjectContext is passed to onContextLoaded so
+   * useWorkspace can dispatch a single LOAD_PROJECT action that
+   * restores all three panels (chat, brief, prompt) at once.
+   */
   const loadProjectHistoricalData = async (
     id: string,
     initialIdea: string,
-    onContextLoaded: (id: string, initialIdea: string, hasMessages: boolean, messages: ChatMessage[]) => void
+    onContextLoaded: (ctx: LoadedProjectContext) => void
   ) => {
     setProjectId(id);
     localStorage.setItem("agent_os_current_project", id);
     router.replace(`/?id=${id}`, { scroll: false });
 
-    const { messages, hasMessages } = await loadProjectMessages(id);
-    
-    // Pass everything back to useWorkspace controller to dispatch accurately
-    onContextLoaded(id, initialIdea, hasMessages, messages);
+    const data = await loadProjectData(id);
+
+    onContextLoaded({
+      id,
+      initialIdea,
+      hasMessages: data.hasMessages,
+      messages: data.messages,
+      pipelineResult: data.pipelineResult,
+      finalMarkdown: data.finalMarkdown,
+      isCompleted: data.isCompleted,
+    });
   };
 
   return {
