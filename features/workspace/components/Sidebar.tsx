@@ -76,8 +76,8 @@ export function Sidebar({
                             key={p.id}
                             onClick={() => onSelectProject(p.id, p.idea_raw)}
                             className={`w-full text-left px-2 py-1.5 text-xs rounded-md transition-colors truncate ${state.projectId === p.id
-                                    ? "bg-primary/10 text-primary font-medium"
-                                    : "hover:bg-muted text-muted-foreground hover:text-foreground"
+                                ? "bg-primary/10 text-primary font-medium"
+                                : "hover:bg-muted text-muted-foreground hover:text-foreground"
                                 }`}
                         >
                             {p.title}
