@@ -1,13 +1,12 @@
-'EOF'
+'TYPESCRIPT'
 // =============================================================================
 // Agent OS — Pipeline Service
 // =============================================================================
-// PHASE 3: runPipelineRequest accepts optional feedback + restartFrom
-// so useWorkspace can trigger a partial re-run without a full page reset.
 
 import type { ChatMessage, AgentName } from "@/types";
 import type { PipelineResult } from "@/agents/orchestrator";
-import { saveFinalPromptAction } from "@/actions/db";
+import { isPipelineReady } from "@/agents/orchestrator";
+import { saveAgentOutputAction, saveFinalPromptAction } from "@/actions/db";
 import { formatFinalPrompt } from "@/utils/format-prompt";
 import { logger } from "@/lib/logger";
 
@@ -16,63 +15,47 @@ export type AgentStatusUpdater = (
   status: "pending" | "running" | "done"
 ) => void;
 
-export function shouldTriggerPipeline(content: string): boolean {
-  const lower = content.toLowerCase();
-  return (
-    lower.includes("enough information") ||
-    lower.includes("generate your")
-  );
-}
+// Re-export for useWorkspace.ts
+export { isPipelineReady as shouldTriggerPipeline };
 
-export interface RunPipelineOptions {
-  feedback?: string;        // PHASE 3: user feedback text
-  restartFrom?: AgentName;  // PHASE 3: explicit restart point override
+export interface RunPipelineServiceOptions {
   rawIdea?: string;
+  feedback?: string;
+  restartFrom?: AgentName;
+  previousResult?: PipelineResult;
+  /** Only animate agents starting from this index (0-3). Defaults to 0 (all). */
+  animateFrom?: number;
 }
 
 export async function runPipelineRequest(
   messages: ChatMessage[],
   onStatusUpdate: AgentStatusUpdater,
   projectId: string | null,
-  options: RunPipelineOptions = {}
+  options: RunPipelineServiceOptions = {}
 ): Promise<{ result: PipelineResult; markdown: string }> {
+  const { feedback, previousResult, animateFrom = 0 } = options;
+
   try {
-    // Agent count depends on restart point for partial re-runs
-    const agentOrder: AgentName[] = [
-      "requirement_analyst",
-      "product_strategist",
-      "technical_architect",
-      "prompt_engineer",
-    ];
-
-    const startIndex = options.restartFrom
-      ? agentOrder.indexOf(options.restartFrom)
-      : 0;
-    const effectiveStart = startIndex === -1 ? 0 : startIndex;
-
     // Animate only the agents that will actually run
-    const animateStatuses = async () => {
-      for (let i = effectiveStart; i < 4; i++) {
-        onStatusUpdate(i, "running");
-        await new Promise((r) => setTimeout(r, 800));
-      }
-    };
+    for (let i = animateFrom; i < 4; i++) {
+      onStatusUpdate(i, "running");
+      await new Promise((r) => setTimeout(r, 800));
+    }
 
-    const [, res] = await Promise.all([
-      animateStatuses(),
-      fetch("/api/pipeline", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          messages,
-          projectId,
-          rawIdea: options.rawIdea,
-          // PHASE 3: pass feedback params if present
-          ...(options.feedback ? { feedback: options.feedback } : {}),
-          ...(options.restartFrom ? { restartFrom: options.restartFrom } : {}),
-        }),
-      }),
-    ]);
+    const body: Record<string, unknown> = { messages, projectId };
+    if (options.rawIdea) body.rawIdea = options.rawIdea;
+    if (options.restartFrom) body.restartFrom = options.restartFrom;
+
+    if (feedback && previousResult) {
+      body.feedback = feedback;
+      body.previousResult = previousResult;
+    }
+
+    const res = await fetch("/api/pipeline", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
 
     if (!res.ok) {
       const traceId = res.headers.get("x-trace-id");
@@ -87,12 +70,14 @@ export async function runPipelineRequest(
     const markdown = formatFinalPrompt(result.finalPrompt);
 
     if (projectId) {
-      saveFinalPromptAction(projectId, markdown).catch((err) => {
-        logger.error("Failed to persist final prompt", {
-          error: err instanceof Error ? err.message : String(err),
-          projectId,
-        });
-      });
+      Promise.all([
+        saveAgentOutputAction(projectId, "requirement_analyst", result.requirements),
+        saveAgentOutputAction(projectId, "product_strategist", result.strategy),
+        saveAgentOutputAction(projectId, "technical_architect", result.architecture),
+        saveFinalPromptAction(projectId, markdown),
+      ]).catch((err) =>
+        logger.error("Failed to persist pipeline output", { error: err.message, projectId })
+      );
     }
 
     return { result, markdown };

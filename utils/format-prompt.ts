@@ -5,18 +5,27 @@
 
 import type { FinalPromptData } from "@/types";
 
+/** Coerce a value that should be string[] into an actual array.
+ *  LLMs sometimes return a single string instead of an array,
+ *  or nest arrays / objects. This normalises the value safely. */
+function ensureArray(value: unknown): string[] {
+  if (Array.isArray(value)) return value.map(String);
+  if (typeof value === "string" && value.trim()) return [value.trim()];
+  return [];
+}
+
 export function formatFinalPrompt(data: FinalPromptData): string {
-  const stackLines = Object.entries(data.suggested_stack)
+  const stackLines = Object.entries(data.suggested_stack ?? {})
     .map(([key, val]) => `- **${capitalize(key)}:** ${val}`)
     .join("\n");
 
-  const featuresLines = data.features.map((f) => `- ${f}`).join("\n");
-  const flowLines = data.core_flows.map((f, i) => `${i + 1}. ${f}`).join("\n");
-  const pagesLines = data.pages_and_components.map((p) => `- ${p}`).join("\n");
-  const dataLines = data.data_model.map((d) => `- ${d}`).join("\n");
-  const constraintLines = data.constraints.map((c) => `- ${c}`).join("\n");
-  const futureLines = data.future_enhancements.map((f) => `- ${f}`).join("\n");
-  const userLines = data.target_users.map((u) => `- ${u}`).join("\n");
+  const featuresLines = ensureArray(data.features).map((f) => `- ${f}`).join("\n");
+  const flowLines = ensureArray(data.core_flows).map((f, i) => `${i + 1}. ${f}`).join("\n");
+  const pagesLines = ensureArray(data.pages_and_components).map((p) => `- ${p}`).join("\n");
+  const dataLines = ensureArray(data.data_model).map((d) => `- ${d}`).join("\n");
+  const constraintLines = ensureArray(data.constraints).map((c) => `- ${c}`).join("\n");
+  const futureLines = ensureArray(data.future_enhancements).map((f) => `- ${f}`).join("\n");
+  const userLines = ensureArray(data.target_users).map((u) => `- ${u}`).join("\n");
 
   return `# ${data.product_name}
 

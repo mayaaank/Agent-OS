@@ -291,6 +291,12 @@ export interface AgentMessageInsert {
   message_type: "input" | "output" | "feedback" | "correction";
   payload: Record<string, unknown>;
   sequence_number: number;
+  meta?: {
+    model_used: string;
+    duration_ms: number;
+    confidence: number;
+    used_fallback: boolean;
+  };
 }
 
 /**

@@ -103,7 +103,7 @@ export async function loadProjectData(projectId: string): Promise<LoadedProject>
     let finalMarkdown = "";
 
     if (agentOutputsMap) {
-      pipelineResult = {
+      const result: PipelineResult = {
         requirements: (agentOutputsMap.requirement_analyst || {}) as any,
         strategy: (agentOutputsMap.product_strategist || {}) as any,
         architecture: (agentOutputsMap.technical_architect || {}) as any,
@@ -112,11 +112,13 @@ export async function loadProjectData(projectId: string): Promise<LoadedProject>
         pipelineRunId: "reloaded",
         warnings: [],
         confidenceScores: {},
+        usedFallback: {},
         isPartialRerun: false,
       };
 
+      pipelineResult = result;
       finalMarkdown = finalPromptRow?.prompt_markdown
-        ?? formatFinalPrompt(pipelineResult.finalPrompt);
+        ?? formatFinalPrompt(result.finalPrompt);
     }
 
     return {
