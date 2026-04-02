@@ -216,7 +216,7 @@ export async function getFinalPromptAction(
     .eq("project_id", projectId)
     .order("created_at", { ascending: false })
     .limit(1)
-    .single();
+    .maybeSingle();
 
   if (error) {
     // PGRST116 = no rows — not a real error when project has no prompt yet
