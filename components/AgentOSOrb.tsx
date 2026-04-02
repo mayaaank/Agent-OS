@@ -8,7 +8,7 @@ import { Bot, Rocket, Terminal } from "lucide-react";
 import * as THREE from "three";
 
 // --- 3D Orb Component ---
-function GlowingOrb({ mousePosition }: { mousePosition: { x: number, y: number } }) {
+function GlowingOrb({ mousePosition, theme }: { mousePosition: { x: number, y: number }, theme: "dark" | "light" }) {
   const groupRef = useRef<THREE.Group>(null);
   const coreRef = useRef<THREE.Mesh>(null);
   const ring1Ref = useRef<THREE.Mesh>(null);
@@ -40,12 +40,12 @@ function GlowingOrb({ mousePosition }: { mousePosition: { x: number, y: number }
 
   return (
     <group ref={groupRef}>
-      <ambientLight intensity={0.5} />
-      <pointLight position={[0, 0, 5]} intensity={2} color="#00f0ff" />
+      <ambientLight intensity={theme === "dark" ? 0.5 : 2} />
+      <pointLight position={[0, 0, 5]} intensity={theme === "dark" ? 2 : 1} color="#00f0ff" />
       
       {/* Background dark sphere to block light */}
       <Sphere args={[baseRadius - 0.1, 64, 64]}>
-        <meshBasicMaterial color="#020617" />
+        <meshBasicMaterial color={theme === "dark" ? "#020617" : "#00C4D4"} transparent opacity={theme === "dark" ? 1 : 0.2} />
       </Sphere>
 
       {/* Pulsing Core */}
@@ -88,10 +88,10 @@ function InfoCard({ label, title, className, delay = 0 }: { label: string, title
       whileHover={{ y: -5, scale: 1.02 }}
       className={`absolute z-20 ${className}`}
     >
-      <div className="p-4 md:p-6 rounded-2xl bg-white/[0.03] backdrop-blur-xl border border-white/10 shadow-[0_0_30px_rgba(0,240,255,0.05)] hover:shadow-[0_0_40px_rgba(0,240,255,0.2)] hover:border-[#00f0ff]/50 transition-all group overflow-hidden max-w-[240px] md:max-w-[300px]">
-         <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#00f0ff]/30 to-transparent group-hover:via-[#00f0ff] animate-[shimmer-slow_3s_infinite]" />
-         <div className="text-[10px] md:text-[11px] font-mono font-bold uppercase tracking-[0.3em] text-[#00f0ff] mb-3 opacity-70 group-hover:opacity-100 transition-opacity">{label}</div>
-         <div className="text-sm md:text-lg font-bold text-white uppercase tracking-tight leading-tight group-hover:text-cyan-50 transition-colors">
+      <div className="p-4 md:p-6 rounded-2xl bg-card/40 backdrop-blur-xl border border-border shadow-xl hover:shadow-[0_0_40px_rgba(0,240,255,0.2)] hover:border-accent/50 transition-all group overflow-hidden max-w-[240px] md:max-w-[300px]">
+         <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-accent/30 to-transparent group-hover:via-accent animate-[shimmer-slow_3s_infinite]" />
+         <div className="text-[10px] md:text-[11px] font-mono font-bold uppercase tracking-[0.3em] text-accent mb-3 opacity-70 group-hover:opacity-100 transition-opacity">{label}</div>
+         <div className="text-sm md:text-lg font-bold text-foreground uppercase tracking-tight leading-tight group-hover:text-accent transition-colors">
             {title}
          </div>
       </div>
@@ -102,6 +102,7 @@ function InfoCard({ label, title, className, delay = 0 }: { label: string, title
 // --- Main Hero Component ---
 export default function AgentOSOrb() {
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  const [theme, setTheme] = useState<"dark" | "light">("dark");
   const containerRef = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({ target: containerRef, offset: ["start start", "end start"] });
   const yParallax = useTransform(scrollYProgress, [0, 1], [0, 200]);
@@ -111,8 +112,23 @@ export default function AgentOSOrb() {
     const handleMouseMove = (e: MouseEvent) => {
       setMousePos({ x: e.clientX, y: e.clientY });
     };
+    
+    // Initial theme check
+    const isDark = document.documentElement.classList.contains("dark");
+    setTheme(isDark ? "dark" : "light");
+
+    // MutationObserver to watch theme changes
+    const observer = new MutationObserver(() => {
+      const isDarkNow = document.documentElement.classList.contains("dark");
+      setTheme(isDarkNow ? "dark" : "light");
+    });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+
     window.addEventListener("mousemove", handleMouseMove);
-    return () => window.removeEventListener("mousemove", handleMouseMove);
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      observer.disconnect();
+    };
   }, []);
 
   const scrollToWorkspace = () => {
@@ -149,70 +165,70 @@ export default function AgentOSOrb() {
         <motion.path 
           d="M 25% 30% L 40% 40% L 50% 50%" 
           fill="none" 
-          stroke="#00f0ff" 
+          stroke={theme === "dark" ? "#00f0ff" : "#00C4D4"} 
           strokeWidth="1" 
-          strokeOpacity="0.2"
+          strokeOpacity={theme === "dark" ? "0.2" : "0.4"}
           filter="url(#glow)"
           initial={{ pathLength: 0 }}
           animate={{ pathLength: 1 }}
           transition={{ duration: 1.5, ease: "easeOut" }}
         />
-        <circle cx="25%" cy="30%" r="3" fill="#00f0ff" filter="url(#glow)" className="animate-pulse" />
+        <circle cx="25%" cy="30%" r="3" fill={theme === "dark" ? "#00f0ff" : "#00C4D4"} filter="url(#glow)" className="animate-pulse" />
 
         {/* Top Right Line */}
         <motion.path 
           d="M 75% 30% L 60% 40% L 50% 50%" 
           fill="none" 
-          stroke="#00f0ff" 
+          stroke={theme === "dark" ? "#00f0ff" : "#00C4D4"} 
           strokeWidth="1" 
-          strokeOpacity="0.2"
+          strokeOpacity={theme === "dark" ? "0.2" : "0.4"}
           filter="url(#glow)"
           initial={{ pathLength: 0 }}
           animate={{ pathLength: 1 }}
           transition={{ duration: 1.5, ease: "easeOut", delay: 0.2 }}
         />
-        <circle cx="75%" cy="30%" r="3" fill="#00f0ff" filter="url(#glow)" className="animate-pulse" />
+        <circle cx="75%" cy="30%" r="3" fill={theme === "dark" ? "#00f0ff" : "#00C4D4"} filter="url(#glow)" className="animate-pulse" />
 
         {/* Bottom Left Line */}
         <motion.path 
           d="M 25% 70% L 40% 60% L 50% 50%" 
           fill="none" 
-          stroke="#00f0ff" 
+          stroke={theme === "dark" ? "#00f0ff" : "#00C4D4"} 
           strokeWidth="1" 
-          strokeOpacity="0.2"
+          strokeOpacity={theme === "dark" ? "0.2" : "0.4"}
           filter="url(#glow)"
           initial={{ pathLength: 0 }}
           animate={{ pathLength: 1 }}
           transition={{ duration: 1.5, ease: "easeOut", delay: 0.4 }}
         />
-        <circle cx="25%" cy="70%" r="3" fill="#00f0ff" filter="url(#glow)" className="animate-pulse" />
+        <circle cx="25%" cy="70%" r="3" fill={theme === "dark" ? "#00f0ff" : "#00C4D4"} filter="url(#glow)" className="animate-pulse" />
 
         {/* Bottom Right Line */}
         <motion.path 
           d="M 75% 70% L 60% 60% L 50% 50%" 
           fill="none" 
-          stroke="#00f0ff" 
+          stroke={theme === "dark" ? "#00f0ff" : "#00C4D4"} 
           strokeWidth="1" 
-          strokeOpacity="0.2"
+          strokeOpacity={theme === "dark" ? "0.2" : "0.4"}
           filter="url(#glow)"
           initial={{ pathLength: 0 }}
           animate={{ pathLength: 1 }}
           transition={{ duration: 1.5, ease: "easeOut", delay: 0.6 }}
         />
-        <circle cx="75%" cy="70%" r="3" fill="#00f0ff" filter="url(#glow)" className="animate-pulse" />
+        <circle cx="75%" cy="70%" r="3" fill={theme === "dark" ? "#00f0ff" : "#00C4D4"} filter="url(#glow)" className="animate-pulse" />
         
         {/* Animated flowing dots on lines */}
         {/* This creates the 'energy flowing' effect towards the center orb */}
-        <circle r="2" fill="#fff" filter="url(#glow)">
+        <circle r="2" fill={theme === "dark" ? "#fff" : "#00C4D4"} filter="url(#glow)">
           <animateMotion dur="3s" repeatCount="indefinite" path="M 25% 30% L 40% 40% L 48% 45%" />
         </circle>
-        <circle r="2" fill="#fff" filter="url(#glow)">
+        <circle r="2" fill={theme === "dark" ? "#fff" : "#00C4D4"} filter="url(#glow)">
           <animateMotion dur="3.5s" repeatCount="indefinite" path="M 75% 30% L 60% 40% L 52% 45%" begin="0.5s" />
         </circle>
-        <circle r="2" fill="#fff" filter="url(#glow)">
+        <circle r="2" fill={theme === "dark" ? "#fff" : "#00C4D4"} filter="url(#glow)">
           <animateMotion dur="3.2s" repeatCount="indefinite" path="M 25% 70% L 40% 60% L 48% 55%" begin="1s" />
         </circle>
-        <circle r="2" fill="#fff" filter="url(#glow)">
+        <circle r="2" fill={theme === "dark" ? "#fff" : "#00C4D4"} filter="url(#glow)">
           <animateMotion dur="3.8s" repeatCount="indefinite" path="M 75% 70% L 60% 60% L 52% 55%" begin="1.5s" />
         </circle>
       </svg>
@@ -247,7 +263,7 @@ export default function AgentOSOrb() {
       <div className="absolute inset-0 z-0 flex items-center justify-center pointer-events-none">
         <div className="w-[800px] h-[800px] pointer-events-auto">
            <Canvas camera={{ position: [0, 0, 8], fov: 45 }}>
-             <GlowingOrb mousePosition={mousePos} />
+             <GlowingOrb mousePosition={mousePos} theme={theme} />
            </Canvas>
         </div>
       </div>
@@ -260,12 +276,12 @@ export default function AgentOSOrb() {
       >
          <div className="relative flex items-center justify-center">
             {/* Inner glow backing for the robot */}
-            <div className="absolute inset-0 bg-cyan-950/80 rounded-full blur-xl scale-150" />
+            <div className={`absolute inset-0 ${theme === "dark" ? "bg-cyan-950/80" : "bg-cyan-100/40"} rounded-full blur-xl scale-150`} />
             
             {/* The Robot */}
-            <div className="relative w-20 h-20 rounded-2xl bg-white/[0.03] border border-cyan-400/30 backdrop-blur-xl shadow-[0_0_60px_rgba(0,240,255,0.6)] flex flex-col items-center justify-center">
-               <Bot className="w-10 h-10 text-[#00f0ff] drop-shadow-[0_0_15px_#00f0ff]" style={{ filter: 'drop-shadow(0 0 10px #00f0ff)' }} />
-               <div className="absolute -bottom-2 w-8 h-1 bg-cyan-400 rounded-full blur-[2px] opacity-70" />
+            <div className="relative w-20 h-20 rounded-2xl bg-card border border-accent/30 backdrop-blur-xl shadow-2xl flex flex-col items-center justify-center">
+               <Bot className="w-10 h-10 text-accent drop-shadow-[0_0_15px_rgba(0,240,255,0.8)]" />
+               <div className="absolute -bottom-2 w-8 h-1 bg-accent rounded-full blur-[2px] opacity-70" />
             </div>
 
             {/* Subtle orbital particles around robot */}

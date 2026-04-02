@@ -75,7 +75,7 @@ export default function AgentOSTitle() {
           className="relative text-[16vw] md:text-[6.5rem] lg:text-[8rem] font-extrabold tracking-[-0.05em] leading-none flex items-center justify-center gap-[0.1em]"
         >
           {/* Main Segment: AGENT */}
-          <span className="relative inline-block text-white">
+          <span className="relative inline-block text-foreground">
              {isGlitching && (
                 <span className="absolute inset-0 text-cyan-400 translate-x-[1px] blur-[1px] opacity-70">AGENT</span>
              )}
@@ -95,7 +95,7 @@ export default function AgentOSTitle() {
             initial={{ scaleX: 0, opacity: 0 }}
             animate={{ scaleX: 1, opacity: 1 }}
             transition={{ delay: 1.5, duration: 2, ease: "circOut" }}
-            className="absolute -bottom-4 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"
+            className="absolute -bottom-4 left-0 right-0 h-px bg-gradient-to-r from-transparent via-border to-transparent"
           />
         </motion.h1>
 

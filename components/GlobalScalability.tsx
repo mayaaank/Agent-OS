@@ -109,16 +109,16 @@ export default function GlobalScalability() {
   }, [rotation]);
 
   return (
-    <div ref={containerRef} className="w-full h-[400px] relative bg-black rounded-3xl border border-cyan-500/20 overflow-hidden shadow-[0_0_50px_rgba(0,240,255,0.02)]">
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-[radial-gradient(circle_at_center,rgba(0,240,255,0.1),transparent_70%)] rounded-full blur-2xl pointer-events-none" />
+    <div ref={containerRef} className="w-full h-[400px] relative bg-muted/30 rounded-3xl border border-accent/20 overflow-hidden shadow-xl">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(0,240,255,0.05),transparent_70%)] pointer-events-none" />
 
-      <div className="absolute top-6 left-6 z-10 text-left bg-black/40 p-5 border border-[#00f0ff]/20 rounded-2xl backdrop-blur-md pointer-events-none">
-         <h3 className="text-white font-heading font-black text-xl tracking-widest uppercase flex items-center gap-3">
-            <Globe className="w-5 h-5 text-[#00f0ff]" />
+      <div className="absolute top-6 left-6 z-10 text-left bg-card/80 p-5 border border-accent/20 rounded-2xl backdrop-blur-md pointer-events-none">
+         <h3 className="text-foreground font-heading font-black text-xl tracking-widest uppercase flex items-center gap-3">
+            <Globe className="w-5 h-5 text-accent" />
             AgentOS Scales Globally
          </h3>
-         <div className="w-12 h-1 bg-[#00f0ff] mt-2 mb-3 shadow-[0_0_10px_#00f0ff]" />
-         <p className="text-cyan-600 font-mono text-xs uppercase tracking-widest max-w-[250px] leading-relaxed">
+         <div className="w-12 h-1 bg-accent mt-2 mb-3 shadow-[0_0_10px_rgba(0,240,255,0.5)]" />
+         <p className="text-accent/60 font-mono text-xs uppercase tracking-widest max-w-[250px] leading-relaxed">
             Deployed anywhere — architecture is entirely hardware & LLM agnostic
          </p>
       </div>

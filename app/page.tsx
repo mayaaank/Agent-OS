@@ -37,7 +37,7 @@ export default function LandingPage() {
       
       {/* 1. Navbar — Minimal & Floating */}
       <nav className="fixed top-0 left-0 right-0 z-[100] flex justify-center py-6 px-4">
-        <div className="max-w-7xl w-full h-16 glass rounded-full flex items-center justify-between px-8 shadow-2xl transition-all hover:bg-white/[0.05]">
+        <div className="max-w-7xl w-full h-16 glass rounded-full flex items-center justify-between px-8 shadow-2xl transition-all hover:bg-accent/5">
           <div className="flex items-center gap-3">
              <div className="size-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center font-bold text-primary">A</div>
              <span className="font-bold tracking-tighter text-xl hidden sm:inline-block">AGENT OS</span>
@@ -54,7 +54,7 @@ export default function LandingPage() {
              <ThemeToggle />
              <Link
                href="/workspace"
-               className="px-6 py-2.5 rounded-full bg-primary text-white text-[12px] font-bold uppercase tracking-widest hover:bg-accent/90 hover:scale-105 active:scale-95 transition-all shadow-[0_0_20px_rgba(0,212,255,0.2)]"
+               className="px-6 py-2.5 rounded-full bg-primary text-primary-foreground text-[12px] font-bold uppercase tracking-widest hover:bg-accent/90 hover:scale-105 active:scale-95 transition-all shadow-[0_0_20px_rgba(0,212,255,0.2)]"
              >
                Explore OS
              </Link>
@@ -83,12 +83,12 @@ export default function LandingPage() {
               <div className="flex flex-col sm:flex-row items-center gap-6 justify-center">
                  <Link
                    href="/workspace"
-                   className="group relative px-10 py-4 rounded-full bg-white text-black font-bold uppercase text-xs tracking-[0.2em] overflow-hidden hover:scale-105 active:scale-95 transition-all shadow-2xl"
+                   className="group relative px-10 py-4 rounded-full bg-foreground text-background font-bold uppercase text-xs tracking-[0.2em] overflow-hidden hover:scale-105 active:scale-95 transition-all shadow-2xl"
                  >
-                   <span className="relative z-10 flex items-center gap-2 text-black">Initialize Workspace <ArrowRight className="size-4" /></span>
+                   <span className="relative z-10 flex items-center gap-2 text-background">Initialize Workspace <ArrowRight className="size-4" /></span>
                    <div className="absolute inset-0 bg-primary/10 opacity-0 group-hover:opacity-100 transition-opacity" />
                  </Link>
-                 <button className="text-muted-foreground hover:text-white font-medium text-xs uppercase tracking-widest flex items-center gap-2 transition-colors">
+                 <button className="text-muted-foreground hover:text-foreground font-medium text-xs uppercase tracking-widest flex items-center gap-2 transition-colors">
                     Watch Product Vision <ChevronRight className="size-4" />
                  </button>
               </div>
@@ -169,7 +169,7 @@ export default function LandingPage() {
                <span className="text-primary text-[11px] font-bold uppercase tracking-[0.3em] font-mono opacity-80 inline-block">03. Key Features</span>
                <h2 className="text-4xl font-bold">Built for Architectural <br/>Clarity and Speed.</h2>
             </div>
-            <button className="text-xs font-bold tracking-widest text-muted-foreground uppercase flex items-center gap-2 hover:text-white transition-colors">
+            <button className="text-xs font-bold tracking-widest text-muted-foreground uppercase flex items-center gap-2 hover:text-foreground transition-colors">
                Explore Full Capability <ArrowRight size={14} className="text-primary" />
             </button>
          </div>
@@ -263,7 +263,7 @@ export default function LandingPage() {
             <h3 className="text-[10px] font-bold text-muted-foreground tracking-[0.4em] uppercase mb-16 text-center">Built used by forward-thinking engineers from</h3>
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-12 opacity-30 grayscale hover:grayscale-0 transition-all duration-700">
                {[1, 2, 3, 4, 5].map(i => (
-                 <div key={i} className="h-8 w-32 bg-muted text-center flex items-center justify-center font-bold text-xs uppercase tracking-[0.2em] rounded-md border border-white/5">
+                 <div key={i} className="h-8 w-32 bg-muted text-center flex items-center justify-center font-bold text-xs uppercase tracking-[0.2em] rounded-md border border-border">
                    Company_{i}
                  </div>
                ))}
@@ -284,10 +284,10 @@ export default function LandingPage() {
                      Modernizing the way AI instructions are engineered. From idea to structure, structure to prompt, prompt to reality. AgentOS is the missing layer in the agentic revolution.
                   </p>
                   <div className="flex gap-6">
-                     <a href="#" className="size-8 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:text-white transition-colors">
+                     <a href="#" className="size-8 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors">
                         <TerminalIcon size={14} />
                      </a>
-                     <a href="#" className="size-8 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:text-white transition-colors">
+                     <a href="#" className="size-8 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors">
                         <MessageSquare size={14} />
                      </a>
                   </div>
@@ -320,7 +320,7 @@ export default function LandingPage() {
                </div>
             </div>
             
-            <div className="mt-20 pt-8 border-t border-white/[0.03] flex justify-between items-center text-[11px] text-muted-foreground uppercase tracking-widest font-mono">
+            <div className="mt-20 pt-8 border-t border-border flex justify-between items-center text-[11px] text-muted-foreground uppercase tracking-widest font-mono">
                <span>&copy; 2026 Agentic Innovation Labs PDX.</span>
                <div className="flex gap-2 items-center">
                   <div className="size-1.5 rounded-full bg-green-500" />
