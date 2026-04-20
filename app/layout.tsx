@@ -3,6 +3,7 @@ import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import CursorRobot from "@/components/CursorRobot";
+import { Analytics } from "@vercel/analytics/next";
 
 const inter = Inter({
   variable: "--font-sans",
@@ -33,6 +34,7 @@ export default function RootLayout({
         <CursorRobot />
         {children}
         <Toaster />
+        <Analytics />
       </body>
     </html>
   );
